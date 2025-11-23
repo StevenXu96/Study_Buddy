@@ -31,7 +31,7 @@ class SummaryGeneratorService {
         You MUST respond with ONLY valid JSON in this exact format (no other text, no markdown, no explanations):
         
         {
-          "summary": "A 200-300 word summary of the main topics and concepts",
+          "summary": "A 300-400 word summary of the main topics and concepts",
           "keyPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4", "Key point 5"],
           "quizQuestions": [
             {"question": "Question 1?", "answer": "Answer to question 1"},
@@ -98,19 +98,27 @@ class SummaryGeneratorService {
         
         // Create prompt
         let prompt = """
-        You are an expert educational assistant. Analyze the following study session transcript and create a comprehensive summary.
+        You are an expert educational assistant and notetaker. Analyze the following study session transcript and create a comprehensive summary optimized for PDF study guides.
         
         TRANSCRIPT:
         \(transcript)
         
         Please provide:
-        1. A detailed summary (200-300 words) covering the main topics and concepts discussed
-        2. 5-7 key points or takeaways
-        3. 5-8 quiz questions with answers based on the material
+        1. A comprehensive study guide in hierarchical point form with the following structure:
+           - Main topics as primary bullet points
+           - Key details, definitions, and facts as sub-bullets (2-3 levels deep)
+           - Use clear, concise points (1-2 sentences maximum per point)
+           - Group related information under descriptive headings
+           - Include all significant concepts, facts, and examples discussed
+           - Format: Use "• " for primary points, "  - " for secondary, "    ∘ " for tertiary
+        
+        2. 5-7 key points or takeaways (brief, high-level summary points)
+        
+        3. 5-8 quiz questions with answers based on the material (test understanding and memorization)
         
         Format your response as JSON with this structure:
         {
-          "summary": "detailed summary text here",
+          "summary": "comprehensive point form summary here with proper hierarchy using bullet symbols",
           "keyPoints": ["point 1", "point 2", ...],
           "quizQuestions": [
             {"question": "question text", "answer": "answer text"},
@@ -118,12 +126,12 @@ class SummaryGeneratorService {
           ]
         }
         
-        Make the summary suitable for a 1-2 page document. Ensure questions test understanding, not just memorization.
+        CRITICAL: The summary must be in complete point form - NO paragraphs or prose. Every piece of information should be a bullet point. Use hierarchical structure with multiple indent levels. Aim for comprehensive coverage suitable for a maximum of 5 page study guide.
         """
         
         // Create request
         let messages = [
-            OpenAIMessage(role: "system", content: "You are an expert educational assistant that creates study summaries and quiz questions."),
+            OpenAIMessage(role: "system", content: "You are an expert educational assistant specializing in creating structured, hierarchical point-form study guides for medical students and residents. Always format summaries with clear bullet hierarchies, never in paragraph form."),
             OpenAIMessage(role: "user", content: prompt)
         ]
         
@@ -131,7 +139,7 @@ class SummaryGeneratorService {
             model: model,
             messages: messages,
             temperature: 0.7,
-            maxTokens: 2000
+            maxTokens: 3000  // Increased for more comprehensive summaries
         )
         
         // Make API call

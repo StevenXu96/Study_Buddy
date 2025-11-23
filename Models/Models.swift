@@ -130,3 +130,51 @@ struct TranscriptionResult {
         return !text.isEmpty && wordCount > 10 // Minimum viable transcription
     }
 }
+
+// MARK: - Written Exam Models
+class WrittenExamQuestion: Identifiable, ObservableObject {
+    let id: UUID
+    let question: String
+    let context: String
+    let modelAnswer: String
+    @Published var score: Int
+    @Published var feedback: String
+    
+    init(id: UUID = UUID(),
+         question: String,
+         context: String,
+         modelAnswer: String,
+         score: Int = 0,
+         feedback: String = "") {
+        self.id = id
+        self.question = question
+        self.context = context
+        self.modelAnswer = modelAnswer
+        self.score = score
+        self.feedback = feedback
+    }
+}
+
+struct QuestionEvaluation {
+    let score: Int
+    let feedback: String
+}
+
+struct QuestionEvaluations {
+    let evaluations: [QuestionEvaluation]
+    let overallFeedback: String
+}
+
+// MARK: - Oral Exam Models
+struct OralExamQuestion {
+    let question: String
+    let context: String
+    let modelAnswer: String
+}
+
+struct OralExamEvaluation {
+    let score: Int
+    let strengths: [String]
+    let areasForImprovement: [String]
+    let overallFeedback: String
+}

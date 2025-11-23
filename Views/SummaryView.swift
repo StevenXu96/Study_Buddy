@@ -4,6 +4,8 @@ struct SummaryView: View {
     let summary: StudySummary
     @Environment(\.dismiss) private var dismiss
     @State private var showingExportOptions = false
+    @State private var showingWrittenExam = false
+    @State private var showingOralExam = false
     
     var body: some View {
         NavigationView {
@@ -71,6 +73,58 @@ struct SummaryView: View {
                             QuizQuestionCard(question: question, number: index + 1)
                         }
                     }
+                    
+                    Divider()
+                    
+                    // Royal College Exam Section
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Royal College Examination Practice")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.blue)
+                        
+                        Text("Test your knowledge with Royal College style examinations")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 15) {
+                            Button(action: {
+                                showingWrittenExam = true
+                            }) {
+                                VStack(spacing: 10) {
+                                    Image(systemName: "doc.text.fill")
+                                        .font(.system(size: 40))
+                                    
+                                    Text("Ready for Written Exam")
+                                        .font(.headline)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(25)
+                                .background(Color.blue.opacity(0.1))
+                                .foregroundColor(.blue)
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button(action: {
+                                showingOralExam = true
+                            }) {
+                                VStack(spacing: 10) {
+                                    Image(systemName: "mic.fill")
+                                        .font(.system(size: 40))
+                                    
+                                    Text("Ready for Oral Exam")
+                                        .font(.headline)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(25)
+                                .background(Color.green.opacity(0.1))
+                                .foregroundColor(.green)
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
                 .padding(30)
             }
@@ -94,6 +148,12 @@ struct SummaryView: View {
         .frame(width: 800, height: 700)
         .sheet(isPresented: $showingExportOptions) {
             ExportView(summary: summary)
+        }
+        .sheet(isPresented: $showingWrittenExam) {
+            WrittenExamView(summary: summary)
+        }
+        .sheet(isPresented: $showingOralExam) {
+            OralExamView(summary: summary)
         }
     }
 }

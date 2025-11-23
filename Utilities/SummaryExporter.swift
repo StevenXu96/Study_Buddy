@@ -9,51 +9,60 @@ class SummaryExporter {
         // Create attributed string with formatting
         let attributedString = createFormattedDocument(summary: summary)
         
-        // Create PDF
-        let pdfData = NSMutableData()
-        
         // Set up page size (US Letter)
-        var pageSize = CGRect(x: 0, y: 0, width: 612, height: 792) // 8.5" x 11"
+        let pageWidth: CGFloat = 612  // 8.5 inches
+        let pageHeight: CGFloat = 792 // 11 inches
         let margin: CGFloat = 50
-        let contentRect = CGRect(
-            x: margin,
-            y: margin,
-            width: pageSize.width - (margin * 2),
-            height: pageSize.height - (margin * 2)
-        )
         
-        guard let pdfConsumer = CGDataConsumer(data: pdfData as CFMutableData),
-              let pdfContext = CGContext(consumer: pdfConsumer, mediaBox: &pageSize, nil) else {
-            return nil
-        }
-        
-        // Begin PDF
-        pdfContext.beginPDFPage(nil)
-        
-        // Draw the content
-        let framesetter = CTFramesetterCreateWithAttributedString(attributedString as CFAttributedString)
-        let framePath = CGPath(rect: contentRect, transform: nil)
-        let frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, attributedString.length), framePath, nil)
-        
-        pdfContext.textMatrix = .identity
-        pdfContext.translateBy(x: 0, y: pageSize.height)
-        pdfContext.scaleBy(x: 1.0, y: -1.0)
-        
-        CTFrameDraw(frame, pdfContext)
-        
-        pdfContext.endPDFPage()
-        pdfContext.closePDF()
-        
-        // Save to file
         let filename = "StudySummary_\(Date().timeIntervalSince1970).pdf"
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let pdfURL = documentsPath.appendingPathComponent(filename)
         
+        // Create PDF data
+        let pdfData = NSMutableData()
+        
+        // Create consumer
+        guard let consumer = CGDataConsumer(data: pdfData as CFMutableData) else {
+            print("Failed to create PDF consumer")
+            return nil
+        }
+        
+        // Create context
+        var mediaBox = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
+        guard let pdfContext = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
+            print("Failed to create PDF context")
+            return nil
+        }
+        
+        // Begin page
+        pdfContext.beginPDFPage(nil)
+        
+        // Create a flipped coordinate system for text drawing
+        pdfContext.translateBy(x: 0, y: pageHeight)
+        pdfContext.scaleBy(x: 1.0, y: -1.0)
+        
+        // Draw the attributed string
+        let drawRect = CGRect(x: margin, y: margin, width: pageWidth - (margin * 2), height: pageHeight - (margin * 2))
+        
+        NSGraphicsContext.saveGraphicsState()
+        let nsContext = NSGraphicsContext(cgContext: pdfContext, flipped: true)
+        NSGraphicsContext.current = nsContext
+        
+        attributedString.draw(in: drawRect)
+        
+        NSGraphicsContext.restoreGraphicsState()
+        
+        // End page and close
+        pdfContext.endPDFPage()
+        pdfContext.closePDF()
+        
+        // Write to file
         do {
-            try pdfData.write(to: pdfURL)
+            try pdfData.write(to: pdfURL, options: .atomic)
+            print("PDF created at: \(pdfURL.path)")
             return pdfURL
         } catch {
-            print("Failed to save PDF: \(error)")
+            print("Failed to write PDF: \(error)")
             return nil
         }
     }
@@ -84,7 +93,6 @@ class SummaryExporter {
         
         // Metadata
         markdown += "**Date:** \(summary.date.formatted(date: .long, time: .shortened))\n\n"
-        markdown += "**Duration:** \(summary.duration)\n\n"
         
         markdown += "---\n\n"
         
@@ -143,31 +151,34 @@ class SummaryExporter {
             string: "Study Session Summary\n\n",
             attributes: [
                 .font: titleFont,
-                .paragraphStyle: titleParagraph
+                .paragraphStyle: titleParagraph,
+                .foregroundColor: NSColor.black
             ]
         )
         document.append(title)
         
         // Metadata
         let metadata = NSAttributedString(
-            string: "Date: \(summary.date.formatted(date: .long, time: .shortened))\nDuration: \(summary.duration)\n\n",
+            string: "Date: \(summary.date.formatted(date: .long, time: .shortened))\n",
             attributes: [
                 .font: metadataFont,
-                .foregroundColor: NSColor.secondaryLabelColor,
+                .foregroundColor: NSColor.darkGray,
                 .paragraphStyle: bodyParagraph
             ]
         )
         document.append(metadata)
         
         // Divider
-        document.append(NSAttributedString(string: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"))
+        document.append(NSAttributedString(string: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n",
+                                          attributes: [.foregroundColor: NSColor.lightGray]))
         
         // Summary section
         let summaryHeading = NSAttributedString(
             string: "Summary\n",
             attributes: [
                 .font: headingFont,
-                .paragraphStyle: headingParagraph
+                .paragraphStyle: headingParagraph,
+                .foregroundColor: NSColor.black
             ]
         )
         document.append(summaryHeading)
@@ -176,20 +187,23 @@ class SummaryExporter {
             string: "\(summary.summaryText)\n\n",
             attributes: [
                 .font: bodyFont,
-                .paragraphStyle: bodyParagraph
+                .paragraphStyle: bodyParagraph,
+                .foregroundColor: NSColor.black
             ]
         )
         document.append(summaryText)
         
         // Key Points
         if !summary.keyPoints.isEmpty {
-            document.append(NSAttributedString(string: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"))
+            document.append(NSAttributedString(string: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n",
+                                              attributes: [.foregroundColor: NSColor.lightGray]))
             
             let keyPointsHeading = NSAttributedString(
                 string: "Key Points\n",
                 attributes: [
                     .font: headingFont,
-                    .paragraphStyle: headingParagraph
+                    .paragraphStyle: headingParagraph,
+                    .foregroundColor: NSColor.black
                 ]
             )
             document.append(keyPointsHeading)
@@ -199,7 +213,8 @@ class SummaryExporter {
                     string: "\(index + 1). \(point)\n",
                     attributes: [
                         .font: bodyFont,
-                        .paragraphStyle: bodyParagraph
+                        .paragraphStyle: bodyParagraph,
+                        .foregroundColor: NSColor.black
                     ]
                 )
                 document.append(pointText)
@@ -208,13 +223,15 @@ class SummaryExporter {
         }
         
         // Quiz Questions
-        document.append(NSAttributedString(string: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"))
+        document.append(NSAttributedString(string: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n",
+                                          attributes: [.foregroundColor: NSColor.lightGray]))
         
         let quizHeading = NSAttributedString(
             string: "Quiz Questions\n\n",
             attributes: [
                 .font: headingFont,
-                .paragraphStyle: headingParagraph
+                .paragraphStyle: headingParagraph,
+                .foregroundColor: NSColor.black
             ]
         )
         document.append(quizHeading)
@@ -224,7 +241,8 @@ class SummaryExporter {
                 string: "Question \(index + 1)\n",
                 attributes: [
                     .font: subheadingFont,
-                    .paragraphStyle: headingParagraph
+                    .paragraphStyle: headingParagraph,
+                    .foregroundColor: NSColor.black
                 ]
             )
             document.append(questionNumber)
@@ -233,7 +251,8 @@ class SummaryExporter {
                 string: "Q: \(question.question)\n",
                 attributes: [
                     .font: bodyFont,
-                    .paragraphStyle: bodyParagraph
+                    .paragraphStyle: bodyParagraph,
+                    .foregroundColor: NSColor.black
                 ]
             )
             document.append(questionText)
@@ -242,7 +261,7 @@ class SummaryExporter {
                 string: "A: \(question.answer)\n\n",
                 attributes: [
                     .font: bodyFont,
-                    .foregroundColor: NSColor.secondaryLabelColor,
+                    .foregroundColor: NSColor.darkGray,
                     .paragraphStyle: bodyParagraph
                 ]
             )

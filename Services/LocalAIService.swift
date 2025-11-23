@@ -293,6 +293,7 @@ class LocalAIService {
         }
         
         struct ModelResponse: Codable {
+            let topic: String
             let summary: String
             let keyPoints: [String]
             let quizQuestions: [QuizQuestionData]
